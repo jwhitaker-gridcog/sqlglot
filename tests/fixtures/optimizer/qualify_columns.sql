@@ -320,6 +320,20 @@ SELECT t.id AS email FROM t AS t ORDER BY email || '';
 SELECT x AS k FROM t JOIN u USING (k) GROUP BY x ORDER BY MAX(k);
 SELECT t.x AS k FROM t AS t JOIN u AS u ON t.k = u.k GROUP BY t.x ORDER BY MAX(k);
 
+# title: ClickHouse projections can reference aliases defined after them
+# dialect: clickhouse
+# execute: false
+# schema: {"t": {"x": "INT"}}
+SELECT b * 2 AS c, a + 1 AS b, x AS a FROM t;
+SELECT (t.x + 1) * 2 AS c, t.x + 1 AS b, t.x AS a FROM t AS t;
+
+# title: ClickHouse forward alias references take precedence over source columns
+# dialect: clickhouse
+# execute: false
+# schema: {"t": {"x": "INT"}}
+SELECT x * 2 AS y, x + 1 AS x FROM t;
+SELECT (t.x + 1) * 2 AS y, t.x + 1 AS x FROM t AS t;
+
 # execute: false
 select * from (values (1, 2));
 SELECT _0._col_0 AS _col_0, _0._col_1 AS _col_1 FROM (VALUES (1, 2)) AS _0(_col_0, _col_1);

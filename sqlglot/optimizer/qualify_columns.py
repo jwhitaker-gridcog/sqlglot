@@ -8,6 +8,7 @@ from collections import Counter
 from sqlglot import alias, exp
 from sqlglot.dialects.dialect import AliasPrecedence, Dialect, DialectType, UsingColumnOrder
 from sqlglot.errors import OptimizeError, highlight_sql
+from sqlglot.helper import tsort
 from sqlglot.optimizer.annotate_types import TypeAnnotator
 from sqlglot.optimizer.resolver import Resolver
 from sqlglot.optimizer.scope import (
@@ -476,7 +477,31 @@ def _expand_alias_refs(
                             ):
                                 inner.set("table", inner_table)
 
-    for i, projection in enumerate(expression.selects):
+    selects = expression.selects
+    order: Iterable[int] = range(len(selects))
+
+    if dialect.SUPPORTS_FORWARD_ALIAS_REFS:
+        # Expand each projection after the aliases it references, wherever they're defined. A
+        # reference to the projection's own alias is a source column, e.g. SELECT x + 1 AS x
+        alias_indexes = {s.alias: i for i, s in enumerate(selects) if isinstance(s, exp.Alias)}
+        dag = {
+            i: {
+                alias_indexes[column.name]
+                for column in walk_in_scope(projection, prune=lambda node: node.is_star)
+                if isinstance(column, exp.Column)
+                and not column.table
+                and alias_indexes.get(column.name, i) != i
+            }
+            for i, projection in enumerate(selects)
+        }
+
+        try:
+            order = tsort(dag)
+        except ValueError:
+            raise OptimizeError("Cannot expand cyclic alias references")
+
+    for i in order:
+        projection = selects[i]
         replace_columns(projection)
         if isinstance(projection, exp.Alias):
             alias_to_expression[projection.alias] = (projection.this, i + 1)

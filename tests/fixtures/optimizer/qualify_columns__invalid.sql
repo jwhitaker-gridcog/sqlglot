@@ -57,3 +57,7 @@ SELECT p.range FROM range(10) AS p WHERE EXISTS (SELECT 1 FROM range(1) AS q WHE
 SELECT p.range FROM range(10) AS p WHERE EXISTS (SELECT 1 WHERE range > 5);
 # dialect: duckdb
 SELECT p.range FROM (VALUES (0), (6)) AS p(range) WHERE EXISTS (SELECT 1 FROM range(1) AS q WHERE range > 5);
+
+-- Cyclic alias references. ClickHouse runs this, but sqlglot rejects it because it's not specified behaviour nor sensible.
+# dialect: clickhouse
+SELECT b AS a, a AS b FROM x;

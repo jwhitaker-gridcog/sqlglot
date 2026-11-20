@@ -650,6 +650,14 @@ class Dialect(metaclass=_Dialect):
     Reference: https://docs.snowflake.com/en/sql-reference/sql/select#usage-notes
     """
 
+    SUPPORTS_FORWARD_ALIAS_REFS = False
+    """
+    Whether a projection can reference an alias that is defined after it in the same SELECT list.
+
+    For example, in ClickHouse:
+        SELECT b * 2 AS c, x + 1 AS b FROM t  -- VALID, c resolves to (t.x + 1) * 2
+    """
+
     SUPPORTS_ORDER_BY_ALL = False
     """
     Whether ORDER BY ALL is supported (expands to all the selected columns) as in DuckDB, Spark3/Databricks
